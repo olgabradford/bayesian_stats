@@ -36,3 +36,10 @@ Sleep and Wake data are from Garmin indicating weather a person is asleep or awa
 My objective is to use this data to create a model that returns the probability I am asleep at a given time. The final goal can be mathematically expressed as:
 𝑃(awake|time)
 
+
+# Bayesian data analysis and Bayesian Regression Modeling in R (datacamp courses)
+99_R_Datacamp_1_fundamentals_of_Bayesian_data_analysis.Rmd
+99_R_Datacamp_2_bayesian_regression_modeling_with_rstanarm.Rmd
+
+
+
