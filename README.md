@@ -27,3 +27,12 @@ Exploration student performarmance in portuguese, and prediction of final exam s
 Comparison between standard machine learning regression algorithms(Random Forest, Linear Regression, Extra Trees, SVM, Gradient Boosted, ElasticNet Regression, vs Baseline.
 Preprocessing(standartization) ,And Bayesian Regression (Poisson distribution)
 
+# 99_Python_25a_Markov_Chain_Monte_Carlo_MCMC_awake_model.ipynb
+# 99_Python_25_Markov_Chain_Monte_Carlo_MCMC.ipynb
+PyMC3 Model for MCMC (Markov Chain Monte Carlo), classification
+Awake and Asleep models from Garmin datasets
+Import required libraries and viisualize both datasets (sleep and waking data)
+Sleep and Wake data are from Garmin indicating weather a person is asleep or awake based on motion sensing and heart rate
+My objective is to use this data to create a model that returns the probability I am asleep at a given time. The final goal can be mathematically expressed as:
+𝑃(awake|time)
+
