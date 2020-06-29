@@ -1,0 +1,1574 @@
+---
+title: "bayesian_regression_with_rstanarm"
+author: "olga"
+date: "May 20, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://campus.datacamp.com/courses/bayesian-regression-modeling-with-rstanarm/introduction-to-bayesian-linear-models?ex=1
+
+Overview: 
+1. Introduction to Bayesian regression
+2. Customizing Bayesian regression models
+3. Evaluating Bayesian regression models
+4. Presenting and using Bayesian regression models
+
+A review of frequentist regression
+Frequentist regressing using ordinary least squares
+The kidiq data
+
+predict child's IQ score from the mother's IQ score
+
+ln_model <- lm(kid_score ~ mom_iq, data = kidiq)
+
+summary(ln_model)
+
+Use broom function package to focus just on the coefficients
+
+
+library(broom)
+tidy(lm_model)
+
+Exploring the data
+Let's get familiar with the Spotify data, songs, which is already loaded for you. Before we start developing models, it's a good idea to take a peek at our data to make sure we know everything thasummat is included.
+
+Print the first 6 rows of the data set.
+Print the structure of the data set.
+
+```{r}
+# Print the first 6 rows
+head(songs, 6)
+
+# Print the structure
+str(songs)
+```
+
+
+Great! The data contains information on the name and artist of each song, along with quantitative information related to the tempo, valence, popularity, age, and length. Now let's use the data to estimate a regression model.
+       track_name    artist_name          album_name song_age valence   tempo
+1    Crazy In Love Beyoncé Dangerously In Love     5351    70.1  99.259
+2     Naughty Girl Beyoncé Dangerously In Love     5351    64.3  99.973
+3         Baby Boy Beyoncé Dangerously In Love     5351    77.4  91.039
+4     Hip Hop Star Beyoncé Dangerously In Love     5351    96.8 166.602
+5      Be With You Beyoncé Dangerously In Love     5351    75.6  74.934
+6 Me, Myself and I Beyoncé Dangerously In Love     5351    55.5  83.615
+  popularity duration_ms
+1         72      235933
+2         59      208600
+3         57      244867
+4         39      222533
+5         42      260160
+6         54      301173
+
+'data.frame':	215 obs. of  8 variables:
+ $ track_name : chr  "Crazy In Love" "Naughty Girl" "Baby Boy" "Hip Hop Star" ...
+ $ artist_name: chr  "Beyoncé" "Beyoncé" "Beyoncé" "Beyoncé" ...
+ $ album_name : chr  "Dangerously In Love" "Dangerously In Love" "Dangerously In Love" "Dangerously In Love" ...
+ $ song_age   : int  5351 5351 5351 5351 5351 5351 5351 5351 5351 5351 ...
+ $ valence    : num  70.1 64.3 77.4 96.8 75.6 55.5 56.2 39.8 9.92 68.1 ...
+ $ tempo      : num  99.3 100 91 166.6 74.9 ...
+ $ popularity : int  72 59 57 39 42 54 43 41 41 42 ...
+ $ duration_ms: int  235933 208600 244867 222533 260160 301173 259093 298533 360440 219160 ...
+> 
+
+
+## Fitting a frequentist linear regression
+Practice creating a linear model using data on songs from Spotify. This will give us base line to compare our Bayesian model to. The songs dataset is already loaded for you.
+
+Create a linear model, lm_model, that predicts song popularity from song age.
+Print a summary of the linear model.
+Use the broom package to view only the coefficients.
+
+```{r}
+# Create the  linear model here
+lm_model <- lm(popularity ~ song_age, data = songs)
+
+# Produce the summary
+summary(lm_model)
+
+# Print a tidy summary of the coefficients
+tidy(lm_model)
+```
+
+
+
+
+Call:
+lm(formula = popularity ~ song_age, data = songs)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-38.908  -2.064   2.936   7.718  34.627 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 68.6899499  2.2619577  30.367  < 2e-16 ***
+song_age    -0.0058526  0.0007327  -7.988 8.52e-14 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 14.9 on 213 degree of freedom
+Multiple R-squared:  0.2305,	Adjusted R-squared:  0.2269 
+F-statistic: 63.81 on 1 and 213 DF,  p-value: 8.516e-14
+> 
+> # Print a tidy summary of the coefficients
+> tidy(lm_model)
+# A tibble: 2 x 5
+  term        estimate std.error statistic  p.value
+  <chr>          <dbl>     <dbl>     <dbl>    <dbl>
+1 (Intercept) 68.7      2.26         30.4  2.45e-79
+2 song_age    -0.00585  0.000733     -7.99 8.52e-14
+
+
+Nice work! You've created a frequentist linear model and learned how to examine the output. In this model, the coefficient for song_age is -0.00585, which means we'd expected the popularity of a song to decrease by -0.00585 for each additional day.
+
+## Bayesian Linear Regression
+
+Why use Bayesian methods?
+
+P-values make inferences about the probability of data, not parameter values
+Bayesian estimation is one solution to this problem
+
+Posteriod distribution: combination of likelihood and prior:
+  Sample the posterior distribution
+  Summarize the sample
+  Use the summary to make inferences about parameter values
+  
+  
+rstanarm package:
+Interface to the Stan probabilistic programming language
+rstanarm provides high level access to Stan
+allows for custom model definitions
+
+
+to load rstanarm:
+library(rstanarm)
+
+#estimate linear regression using stan_glm function
+stan_model <- stan_glm(kid_score ~ mom_iq, data = kidiq)
+
+
+summary(stan_model)
+
+sigma 0 standard deviation of error
+mean_PPD: mean of posterior predictive samples
+log-posterior: analogous to a likelihood
+
+in summary(diagnostics) pay attention to Rhat paramanter. (at convergence Rhat=1, if a model is converged it means patameter estimates are stable, otherwise results unreliable)
+
+Rhat: a measure of within chain variance compared to ac(ross chain variance
+In general we want all Rhat values to be less than 1.1(indicate convergence)
+
+itting a Bayesian linear regression
+Practice fitting a Bayesian model. This is the same model we already estimated with frequentist methods, so we'll be able to compare the parameter outputs later. The songs data is already loaded.
+
+Instructions
+100 XP
+Create a Bayesian linear model, stan_model, that predicts song popularity from song age
+Print a summary of the Bayesian linear model
+```{r}
+install.packages("rstanarm")
+```
+
+
+```{r}
+library(rstanarm)
+# Create the model here
+stan_model <-stan_glm(popularity ~ song_age, data = songs)
+
+# Produce the summary
+summary(stan_model)
+
+# Print a tidy summary of the coefficients
+tidy(stan_model)
+```
+
+Yes! You now know how to estimate a Bayesian regression model! Notice that the parameter estimates are very similar to those of the frequentist model. Bayesian estimation won't usually have a large impact on your estimates, but will greatly influence the types of estimates you are able to make.
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age
+ algorithm:    sampling
+ sample:       1000 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   2
+
+Estimates:
+              mean   sd   10%   50%   90%
+(Intercept) 68.7    2.2 65.7  68.7  71.5 
+song_age     0.0    0.0  0.0   0.0   0.0 
+sigma       15.0    0.8 14.0  14.9  15.9 
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 52.5    1.4 50.8  52.5  54.3 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+              mcse Rhat n_eff
+(Intercept)   0.1  1.0  1089 
+song_age      0.0  1.0  1080 
+sigma         0.0  1.0   989 
+mean_PPD      0.0  1.0   857 
+log-posterior 0.1  1.0   511 
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+> 
+> # Print a tidy summary of the coefficients
+> tidy(stan_model)
+# A tibble: 2 x 3
+  term        estimate std.error
+  <chr>          <dbl>     <dbl>
+1 (Intercept) 68.7      2.26    
+2 song_age    -0.00584  0.000664
+> 
+
+
+
+
+## Comparing Bayesian and Frequentist Approaches
+
+Function stan_glm(bayesian) and lm(linear regression) are very simillar. Why bother with Bayesian>
+
+If you look at summary of both models  with tidy(lm_model) or tidy(stan_model values are very simillar. However output from bayesian model doesnt contain test statistics and p-values.
+
+
+### Frequentist vs Bayesian
+Frequentist: parameters are fixed, data is random
+Bayesian: parameters are random, data is fixed.
+what's p-value?
+  Probability of test statistics given null hypothesis
+  
+So what do Bayesians want?
+  Probability of parameter values, given the observed data.
+  
+### Evaluating Bayesian parameters
+for Bayesian we use credible interval(very similar to Confidence interval, however CI doenst tell us anything how probably specific value is given parameters of interest are)
+
+Confidence interval: probability that a range contains the true value: There is a 90% probability that range contrains the true value
+
+
+Credible interval: Probability that the true value is within the range. There is a 90% probability that the true value falls within this range.
+
+Probability of parameter values vs probability of range boundaries
+
+In bayesian we can easilty calculate this credible intervals
+posterior_interval(stan_model)
+
+or 
+posterior_interval(stan_model, prob=0.95)
+posterior_interval(stan_model, prob=0.5)
+
+This intervals looks very similar to Confidence Intervals
+confint(lm_model, parm='nom_iq', level=0.95)
+
+Credible interval:
+posterior_interval(stan_model, pars='mom_iq', prob=0.95)
+We interested in probability following between 2 points, not the probability capturing true value between 2 points.
+
+In bayesian we can ask what is the probability between 0.6 and 0.65
+
+mean(between(posterior_mom_iq, 0.60, 0.65))  #only 31% chance true value is within that range. But with linear model we cant answer this questions. Only bayesian method allows us to make inferences about the actual values of parameters.
+
+
+### Creating credible intervals
+Practice creating credible intervals. Credible intervals allow us to make inferences about the probability of a parameter taking a given value. This is how we determine if a parameter is meaningful when estimated with Bayesian methods. The Bayesian model, stan_model, is already created for you.
+
+Instructions
+100 XP
+Create 90% credible intervals for the parameters in stan_model
+Create 95% credible intervals for the parameters in stan_model
+Create 80% credible intervals for the parameters in stan_model
+
+```{r}
+# Create the 90% credible intervals
+posterior_interval(stan_model)
+
+# Create the 95% credible intervals
+posterior_interval(stan_model, prob = 0.95)
+
+# Create the 80% credible intervals
+posterior_interval(stan_model, prob = 0.8)
+```
+
+> # Create the 90% credible intervals
+> posterior_interval(stan_model)
+                      5%          95%
+(Intercept) 64.961634106 72.286064792
+song_age    -0.007040511 -0.004646661
+sigma       13.763101640 16.214679503
+> 
+> # Create the 95% credible intervals
+> posterior_interval(stan_model, prob = 0.95)
+                    2.5%        97.5%
+(Intercept) 64.241161155 73.103937723
+song_age    -0.007149552 -0.004480484
+sigma       13.513820180 16.440518686
+> 
+> # Create the 80% credible intervals
+> posterior_interval(stan_model, prob = 0.8)
+                     10%          90%
+(Intercept) 65.723078923 71.476145694
+song_age    -0.006718015 -0.004898744
+sigma       13.988468030 15.942366163
+> 
+
+Great job! You're well on your way to becoming a Bayesian! Here, we've learned how to create a credible interval for our parameters, and how to change how big of an interval we want. These intervals allow us to make inferences about the actual values of the parameters, unlike in frequentist regression.
+
+  
+## Modifying Bayesian Model.
+
+#### What is Bayesian Model?
+
+Posterior Distributions:
+  Posterior distributions sampled in groups called chains
+  Each sample in a chain is an iteration
+  
+Changing the number and length of chains:
+(default is 4 chains 1000 each)
+stan_model <- stan_glm(kid_score ~ mom_iq, data=kidiq, chains = 3, iter = 1000, warmup = 500) #first 500 discared for warmup
+
+How many iterations?
+Fewer iterations = shorted estimation time
+Not enough iterations = convergence problems(stability of the model), important to pay attention to Rhat values
+```{r}
+# 3 chains, 1000 iterations, 500 warmup
+model_3chains <- stan_glm(popularity ~ song_age, data = songs,
+    chains = 3, iter = 1000, warmup = 500)
+
+# Print a summary of model_3chains
+summary(model_3chains)
+
+# 2 chains, 100 iterations, 50 warmup
+model_2chains <- stan_glm(popularity ~ song_age, data = songs,
+    chains = 2, iter = 100, warmup = 50)
+
+# Print a summary of model_2chains
+summary(model_2chains)
+```
+
+
+
+> # 3 chains, 1000 iterations, 500 warmup
+> model_3chains <- stan_glm(popularity ~ song_age, data = songs,
+      chains = 3, iter = 1000, warmup = 500)
+> 
+> # Print a summary of model_3chains
+> summary(model_3chains)
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age
+ algorithm:    sampling
+ sample:       1500 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   2
+
+Estimates:
+              mean   sd   10%   50%   90%
+(Intercept) 68.6    2.2 65.8  68.6  71.5 
+song_age     0.0    0.0  0.0   0.0   0.0 
+sigma       15.0    0.7 14.0  15.0  15.9 
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 52.5    1.4 50.7  52.5  54.3 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+              mcse Rhat n_eff
+(Intercept)   0.1  1.0  1559 
+song_age      0.0  1.0  1569 
+sigma         0.0  1.0  1623 
+mean_PPD      0.0  1.0  1348 
+log-posterior 0.0  1.0   745 
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age
+ algorithm:    sampling
+ sample:       100 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   2
+
+Estimates:
+              mean   sd   10%   50%   90%
+(Intercept) 65.7    8.7 62.0  68.4  70.8 
+song_age     0.0    0.0  0.0   0.0   0.0 
+sigma       16.5    5.2 14.0  15.0  16.7 
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 49.2    8.7 45.2  51.9  53.8 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+              mcse Rhat n_eff
+(Intercept)    3.2  1.2   8  
+song_age       0.0  1.0 132  
+sigma          2.0  1.3   7  
+mean_PPD       3.5  1.3   6  
+log-posterior 18.1  1.3   7  
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+> 
+
+Correct! Now you can alter the size of the sample of your poterior distribution! Be careful when making your chains shorter though. Notice the warning messages that we received for model_2chains. These are an indication that we didn't draw enough samples from the posterior distribution to get good estimates of the parameters.
+  
+2_chains_model is not converged (Rhat is too high > 1.1)
+ 
+ 
+ 
+### Prior Distributions
+What is a prior distribution?
+Information that we bring to the model
+Likelihood + prior = posterior
+
+#### Prior Distributions in rstanarm
+prior_summary(stan_model{{1}}
+
+#### Calculationg Adjusted scales (what is it?)
+intercept: 10 * sd(y)  (10 is default scale for intecept)
+coeffiecients: (2.5/ sd(x)) * sd(y) (2.5 is a scale for predictors)
+x-predictor, y-dependent variable
+
+10 * sd(kidiq$kid_score
+
+
+(2.5 / sd(kidiq$mom_iq)) * sd(kidiq$kid_score)
+
+#### Unadjusted Priors
+
+no_scale <- stan_glm(kid_score ~ mom_iq, data = kidiq,
+  prior_intercept = normal(autoscale = FALSE),
+  prior = normal(autoscale = FALSE),
+  prior_aux = exponential(autoscale = FALSE)
+)
+prior_summary(no_scale)
+#we can see that scale is not longer adjusted
+
+Determine Prior Distributions
+Now let's explore the prior distributions for a Bayesian model, so that we can understand how rstanarm handles priors. Priors can have a large impact on our model, so it's important to know which prior distributions were used in an estimated model. The songs data set is already loaded.
+
+Instructions
+100 XP
+Estimate a model predicting popularity from song_age
+Print a summary of the prior distributions to the screen
+
+
+```{r}
+# Estimate the model
+stan_model <- stan_glm(popularity ~ song_age, data = songs)
+
+# Print a summary of the prior distributions
+prior_summary(stan_model)
+```
+Priors for model 'stan_model' 
+------
+Intercept (after predictors centered)
+  Specified prior:
+    ~ normal(location = 0, scale = 10)
+  Adjusted prior:
+    ~ normal(location = 0, scale = 170)
+
+Coefficients
+  Specified prior:
+    ~ normal(location = 0, scale = 2.5)
+  Adjusted prior:
+    ~ normal(location = 0, scale = 0.03)
+
+Auxiliary (sigma)
+  Specified prior:
+    ~ exponential(rate = 1)
+  Adjusted prior:
+    ~ exponential(rate = 0.059)
+------
+See help('prior_summary.stanreg') for more details
+> 
+Great! Now you know how to identify the prior distributions of your model! The intercept uses a normal prior with a mean of 0 and scale of 10. The coefficient for the predictor uses a normal prior with a mean of 0 and a scale of 2.5. Finally, the error variance uses an exponential priors with a rate of 1. However, notice that all priors also have an adjusted scale. In the next exercise we'll examine how these are calculated.
+
+
+Calculate Adjusted Scales
+It's important to understand how rstanarm calculates adjusted scales for prior distributions, as priors can have a large impact on our estimates if not used in an appropriate manner. Calculate what the adjusted scales should be using the already loaded songs data.
+
+Instructions
+100 XP
+Calculate the adjusted scale of the intercept.
+Calculate the adjusted scale of the song_age.
+What would be the adjusted scale of valence if it were in the model?
+
+```{r}
+# Calculate the adjusted scale for the intercept
+10 * sd(songs$popularity)
+
+# Calculate the adjusted scale for `song_age`
+(2.5 / sd(songs$song_age)) * sd(songs$popularity)
+
+# Calculate the adjusted scale for `valence`
+(2.5 / sd(songs$valence)) * sd(songs$popularity)
+```
+> # Calculate the adjusted scale for the intercept
+> 10 * sd(songs$popularity)
+[1] 169.5062
+> 
+> # Calculate the adjusted scale for `song_age`
+> (2.5 / sd(songs$song_age)) * sd(songs$popularity)
+[1] 0.03047504
+> 
+> # Calculate the adjusted scale for `valence`
+> (2.5 / sd(songs$valence)) * sd(songs$popularity)
+[1] 1.98643
+
+Awesome! Great work calculating those adjusted scales! These scales are exactly the same as the adjusted scales that we saw in the previous exercise.
+
+
+Unadjusted Priors
+Now let's specify a model that doesn't use adjusted scales for prior distributions, so that we alter rstanarm default behavior. This will allow us to have more direct control over the information going into the estimation. The songs data is already loaded.
+
+Instructions
+100 XP
+Predict popularity from song_age
+Tell rstanarm not to autoscale the parameters
+Print a prior summary to confirm there was no adjustment
+
+
+```{r}
+# Estimate the model with unadjusted scales
+no_scale <- stan_glm(popularity ~ song_age, data = songs,
+    prior_intercept = normal(autoscale = FALSE),
+    prior = normal(autoscale = FALSE),
+    prior_aux = exponential(autoscale = FALSE)
+)
+
+# Print the prior summary
+prior_summary(no_scale)
+```
+
+Priors for model 'no_scale' 
+------
+Intercept (after predictors centered)
+ ~ normal(location = 0, scale = 10)
+
+Coefficients
+ ~ normal(location = 0, scale = 2.5)
+
+Auxiliary (sigma)
+ ~ exponential(rate = 1)
+------
+See help('prior_summary.stanreg') for more details
+> 
+Perfect! You're well on your way to fully controlling the prior distributions. Notice that now that autoscale = FALSE has been specified, the prior summary no longer includes adjusted scales. Now that we've learned how to modify the default priors, we can move onto specifying priors that are entirely our own.
+
+
+## USER specified priors
+Why change the default prior?
+Good reason to believe the parameter will take a given value
+Constraints on parameter
+
+#### specify a prior
+stan_model <- stan_glm(kid_score ~ mom_iq, data = kidiq,
+  prior_intercept = normal(location=0, scale=10, autoscale=FALSE
+  prior = nomal(location = 0, scale=2.5, autoscale=FALSE),
+  prior_aux = exponential(rate = 1, autoscale=FALSE)
+)
+Many different priors that can be used:
+normal()
+exponential()
+student_t()
+cauchy()
+
+
+##### flat priors
+stan_model <- stan_glm(kid_score ~ mom_iq, data = kidiq,
+  prior_intercept=NULL, 
+  prior = NULL,
+  prior_aux = NULL
+)
+
+### Changing Priors
+Now let's change the prior distributions for our Spotify model. Changing the priors allows us to specify our own beliefs about the expected values of the parameters. The songs data set is already loaded.
+
+Instructions
+100 XP
+Predict popularity from song_age
+Create a model, flat_prior that uses flat priors for all parameters
+Print a summary of the prior distributions to the screen
+
+```{r}
+# Estimate a model with flat priors
+flat_prior <- stan_glm(popularity ~ song_age, data = songs,
+    prior_intercept = NULL, prior = NULL, prior_aux = NULL)
+
+# Print a prior summary
+prior_summmary(flat_prior)
+```
+
+Priors for model 'flat_prior' 
+------
+Intercept (after predictors centered)
+ ~ flat
+
+Coefficients
+ ~ flat
+
+Auxiliary (sigma)
+ ~ flat
+------
+See help('prior_summary.stanreg') for more details
+
+Awesome job! You've learned how to specify your own flat prior distributions! Flat priors provide no additional information to the model. This is often not the best choice, but specifying priors that provide too much information can also be problematic. We'll explore this in the next exercise.
+
+#### Specifying informative priors
+Now let's specify a custom prior so that we can have more control over our model. The songs data set is already loaded.
+
+Instructions
+100 XP
+Predict popularity from song_age
+Specify a normal prior distribution for the predictor with a mean of 20 and standard deviation of 0.1
+Print the prior summary to the screen
+
+```{r}
+# Estimate the model with an informative prior
+inform_prior <- stan_glm(popularity ~ song_age, data = songs,
+    prior = normal(location = 20, scale = 0.1, autoscale = FALSE))
+
+# Print the prior summary
+prior_summary(inform_prior)
+```
+Priors for model 'inform_prior' 
+------
+Intercept (after predictors centered)
+  Specified prior:
+    ~ normal(location = 0, scale = 10)
+  Adjusted prior:
+    ~ normal(location = 0, scale = 170)
+
+Coefficients
+ ~ normal(location = 20, scale = 0.1)
+
+Auxiliary (sigma)
+  Specified prior:
+    ~ exponential(rate = 1)
+  Adjusted prior:
+    ~ exponential(rate = 0.059)
+------
+See help('prior_summary.stanreg') for more details
+> 
+Great! Now you know how to specify a custom prior distribution! Notice in the prior summary that we've said the coefficient for song_age has a location of 20 with a very small variance. Therefore, we would expect the parameter estimate to also be very close to 20.
+
+
+### Altering the Estimation Process
+
+Divergent Transitions
+There were 15 divergent transitions after warmup. Increasing adapt_delta above 0.8 may help.
+
+Too big of steps in the estimator
+Adjust step size
+
+
+#### how to control the step size:
+stan_model <- stan_glm(popularity ~ song_age, data = songs,
+control = list(adapt_delta = 0.95))
+
+adapt_delta argument can range from 0 to 1, by increasing adapt_delta we descrease the step size, so that can resolve diversion transitions error
+
+
+##### exceeding the maximum treedepth
+can get an error message 
+Chain 1 reached the meximum tree depth
+
+Sample evaluates branches and looks for a good place to 'U-Turn'
+Max tree depth indicates poor efficiency
+we can control by specifing max_treedepth
+stan_model <- stan_glm(popularity ~ song, data=songs,
+  control = list(max_treedepth = 10))
+
+by further increasing max_treedepth we can look further
+stan_model <- stan_glm(popularity ~ song, data=songs,
+  control = list(max_treedepth = 10))
+  
+#### Tuning the Estimation
+Estimation error are threats to the validity if the model
+Although complicated, these errors can be adressed easily
+
+Altering the Estimation
+Now let's alter the estimation options so that we can be prepared to resolve errors that may arise. It's important for these errors to be resolved if they come up so that we can be sure we are making valid inferences. The songs data is already loaded.
+
+Instructions
+100 XP
+Estimate two models predicting popularity from song_age
+In the first model, set adapt_delta to 0.99
+In the second model, set the max_treedepth to 15
+View a summary of each model
+
+```{r}
+# Estimate the model with a new `adapt_delta`
+adapt_model <- stan_glm(popularity ~ song_age, data = songs,
+  control = list(adapt_delta = 0.99))
+
+# View summary
+summary(adapt_model)
+
+# Estimate the model with a new `max_treedepth`
+tree_model <- stan_glm(popularity ~ song_age, data = songs,
+  control = list(max_treedepth = 15))
+
+# View summary
+summary(tree_model)
+```
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age
+ algorithm:    sampling
+ sample:       1000 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   2
+
+Estimates:
+              mean   sd   10%   50%   90%
+(Intercept) 68.7    2.2 65.7  68.7  71.5 
+song_age     0.0    0.0  0.0   0.0   0.0 
+sigma       15.0    0.8 14.0  14.9  15.9 
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 52.5    1.4 50.8  52.5  54.3 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+              mcse Rhat n_eff
+(Intercept)   0.1  1.0  1089 
+song_age      0.0  1.0  1080 
+sigma         0.0  1.0   989 
+mean_PPD      0.0  1.0   857 
+log-posterior 0.1  1.0   511 
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+> 
+> # Estimate the model with a new `max_treedepth`
+> tree_model <- stan_glm(popularity ~ song_age, data = songs,
+    control = list(max_treedepth = 15))
+> 
+> # View summary
+> summary(tree_model)
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age
+ algorithm:    sampling
+ sample:       1000 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   2
+
+Estimates:
+              mean   sd   10%   50%   90%
+(Intercept) 68.7    2.2 65.7  68.7  71.5 
+song_age     0.0    0.0  0.0   0.0   0.0 
+sigma       15.0    0.8 14.0  14.9  15.9 
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 52.5    1.4 50.8  52.5  54.3 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+              mcse Rhat n_eff
+(Intercept)   0.1  1.0  1089 
+song_age      0.0  1.0  1080 
+sigma         0.0  1.0   989 
+mean_PPD      0.0  1.0   857 
+log-posterior 0.1  1.0   511 
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+
+Wonderful! Now you're prepared to handle rstanarms most common estimation errors. Notice in these summaries that nothing looks different. These options don't alter the model itself, but instead modify the underlying estimation algorithm
+
+
+## Assesing Model Fit
+### Using the R Squared Statistics
+
+Evaluation of Model and predictions
+If our model doesnt fit, we cand do good predictions
+
+What is R2?
+Coefficient of determination. More specifically,  The R2 statistic measures the proportion varience in a deep ne end of variable. R2 measures from 0 to 1, with 0 representing no variance explained, and 1 representing all of the variance, or a deterministic model. Because of this R2 is also knows as coefficient of determination.
+R squared is calculated as R2= 1 - sum(y1-yhat)2
+                                   ------------
+                                    sum(y1-ymean)2
+                                    
+y1- observed value 
+yhat-predicted value
+ymean - mean value    
+
+
+### In linear regression calculation of R2
+lm_model <- lm(kid_score ~ mom_iq, data=kidiq)
+
+lm_summary <- summary(lm_model)
+lm_summary$r.squared
+
+by hand:
+ss_res <- var(residuals(lm_model))
+ss_total <-var(residuals(lm_model))+ var(fitted(lm_model))
+
+r2=1-(ss_res/ss_total)
+
+### R2 of a Bayesian Model
+
+stan_model <- stan_glm(kid_score ~ mom_iq, data=kidiq)
+ss_res <- var(residuals(stan_model))
+ss_total <- var(fitted(stan_model))+var(residuals(stan_model))
+
+r2=1-(ss_res/ss_total)
+
+### Calculating Frequentist R-squared
+Let's practice calculating the R-squared. By starting with the frequentist R-squared, we can check our formulas for calculating the R-squared by hand, by checking against the value in the frequentist summary. The lm_model and lm_summary objects are already in your environment.
+
+Instructions
+100 XP
+Print the R-squared value from the lm_summary object
+Calculate the variance of the residuals of the lm_model
+Calculate the variance of the predicted values of the lm_model
+Calculate the R-squared value
+```{r}
+# Print the R-squared from the linear model
+lm_summary$r.squared
+
+# Calulate sums of squares
+ss_res <- var(residuals(lm_model))
+ss_fit <- var(fitted(lm_model))
+
+# Calculate the R-squared
+1 - (ss_res / (ss_res + ss_fit))
+
+```
+
+> # Print the R-squared from the linear model
+> lm_summary$r.squared
+[1] 0.2305064
+> 
+> # Calulate sums of squares
+> ss_res <- var(residuals(lm_model))
+> ss_fit <- var(fitted(lm_model))
+> 
+> # Calculate the R-squared
+> 1 - (ss_res / (ss_res + ss_fit))
+[1] 0.2305064
+> 
+
+Awesome! Notice we get the same value of 0.23 with both methods. This means that the song_age explains 23% of the variance in popularity. Now that we've learned how to manually calculate the R-squared, we can apply these formulas to the Bayesian model.
+
+
+
+### R-squared for a Bayesian Model
+Now let's calculate the R-squared for a Bayesian model so we can assess the predictions of models estimated with stan_glm. The stan_model object is already loaded.
+
+Instructions
+100 XP
+Calculate the variance of the residuals of stan_model
+Calculate the variance of the fitted values of stan_model
+Calculate the R-squared
+
+```{r}
+# Save the variance of residulas
+ss_res <- var(residuals(stan_model))
+
+# Save the variance of fitted values
+ss_fit <- var(fitted(stan_model))
+
+# Calculate the R-squared
+1 - (ss_res / (ss_res + ss_fit))
+```
+> # Save the variance of residulas
+> ss_res <- var(residuals(stan_model))
+> 
+> # Save the variance of fitted values
+> ss_fit <- var(fitted(stan_model))
+> 
+> # Calculate the R-squared
+> 1 - (ss_res / (ss_res + ss_fit))
+[1] 0.2300082
+Good job! For the Bayesian model, we get an R-squared of 0.23, which is very close to the R-squared for the frequentist model, as would be expected given how similar the parameter estimates are. Now let's look at some new methods for assessing model fit that are only available for Bayesian models.
+
+
+
+## Posterior Predictive Model Checks
+Only could be calculated where Bayesian estimation process used.
+
+Using posterior distributions.
+stan_model <- stan_glm(kid_score~mom_iq, data=kidiq)
+spread_drawsa(stan_model, '(Intercept)', mom_iq) %>%
+will be 3990 rows  1000 from each chain
+
+Can use this to calculate predicted score for our data
+predictions <- posterior_linpred(stan_model)
+
+predictions[1:10, 1:5]
+will return a matrix where each row is predicted iteration, column for each observation
+We can get predicted scores for first and second interation
+#first iteration
+iter1 <- predictions[1,]
+#second iteration
+iter2 <- predictions[2,]
+#look at summary of these scores
+summary(iter1)
+summary(iter2)
+
+#we could compare predicted scores to expected distribution
+#child 24 observed score
+kidiq$kid_Score[24]
+summary(predictions[,24])
+
+
+####Predicted score distributions
+Now let's practicing using posterior predictive scores to look at how our Spotify model fits to the real data.
+
+Instructions
+100 XP
+Calculate the posterior predicted scores for stan_model
+Print a summary of the observed popularity scores in the songs data
+Compare this to a summary of the 1st and 10th replications
+
+
+```{r}
+# Calculate posterior predictive scores
+predictions <- posterior_linpred(stan_model)
+
+# Print a summary of the observed data
+summary(songs$popularity)
+
+# Print a summary of the 1st replication
+summary(predictions[1,])
+
+# Print a summary of the 10th replication
+summary(predictions[10,])
+```
+
+> # Calculate posterior predictive scores
+> predictions <- posterior_linpred(stan_model)
+> 
+> # Print a summary of the observed data
+> summary(songs$popularity)
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00   47.50   56.00   52.55   62.00   85.00
+> 
+> # Print a summary of the 1st replication
+> summary(predictions[1,])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  39.95   47.96   52.74   52.32   57.20   65.01
+> 
+> # Print a summary of the 10th replication
+> summary(predictions[10,])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  37.45   46.61   52.06   51.58   57.17   66.09
+> 
+
+
+Great work! Now you know the basics of comparing score distributions. Notice that the observed data goes from 0 to 85, but in the simualted data sets, the predicted scores only range from about 37 to 66. However the means of all three summaries are very similar. This suggests that the model is better at predicting songs with an average level of popularity than the edge cases.
+
+
+### Model Fit with Posterior Predictive Model Checks
+
+R2 Posterior Distribution
+stan_model <- stan_glm(kid_score ~ mom_iq, data=kidiq)
+r2_posterior <- bayes_R2(stan_model)
+
+summary(r2_posterior)
+
+#or create a 95% credible interval using quantile function
+quantile(r2_posterior, probs = c(0.025, 0.975))
+
+#or look at histogram
+hist(r2_posterior)
+
+#or density overlay  (if model fits, dark blue line should like closely to other lines)
+pp_check(stan_model, 'dens_overlay')
+
+#stat, means from each observation, and prediction in the middle, like a histogram
+pp_check(stan_model, 'stat')
+
+
+
+#by changing stat to stat_2d
+pp_check(stan_model, 'stat_2d')
+# each light blue dot will show predicted, dark balue - observed. Because dark blue is inside light blue predictions fit our data
+
+### R-squared Posterior
+First, let's get a posterior distribution of the R-squared statistic so we can make inferences about how predictive our model is likely to be. The stan_model using the Spotify data is already loaded.
+
+Instructions
+100 XP
+Calculate the posterior distribution of the R-squared statistic
+Create a histogram of the R-squared distribution
+
+```{r}
+# Calculate the posterior distribution of the R-squared
+r2_posterior <- bayes_R2(stan_model)
+
+# Make a histogram of the distribution
+hist(r2_posterior)
+```
+Awesome! Now you can see a range for how predictive your model may be. Notice that the distribution is centered around 0.23, which is the point estimate we calculated earlier. But now, we can see that the true value of the R-squared could plausibly range from about 0.10 to 0.35
+
+
+
+Plot the density of predicted scores from replication compared to the observed density
+Create a scatter plot of the mean and standard deviations of the replicated predicted scores compared to the observed data
+
+```{r}
+# Create density comparison
+pp_check(stan_model, "dens_overlay")
+
+# Create scatter plot of means and standard deviations
+pp_check(stan_model, "stat_2d")
+```
+Great work! Now you can evaluate if your model fits the data! In the first plot, we can see there is a second mode of popularity scores around 10 that is not captured by the model, even though the peaks of the observed data and model are in similar places. In the second plot, the mean and standard deviation of the observed data is right in the middle of the expected distribution of points, indicating that these two characteristics are recovered well
+
+
+
+### Bayesian Model Comparisons
+If we have multiple models we need to find out which one is the best
+
+The loo package (for comparisons)
+LOO (leave one out)
+uses approximated cross validation
+loo-package
+
+library(rstanarm)
+library(loo)
+stan_model <- stan_glm(kid_score ~ mom_iq, data=kidiq)
+
+loo(stan_model)
+will give information how much data was used
+
+
+
+lets say we have 2 possible models
+model_1 <- stan_glm(kid_score ~ mom_iq, data=kidiq)
+model_2 <- stan_glm(kid_score ~ mom_iq*mom_hs, data=kidiq)
+
+loo_pred1 <- loo(model_1)
+loo_pred2 <- loo(model_2)
+
+compare(loo_pred1, loo_pred2)
+
+interpreting reesults:
+positive = prefer second model
+negative = preference for the first model
+
+
+significant difference? 
+Absolute value of difference relative to standard error
+
+elpd_diff=6.1 se=3.9
+because difference is positive and 6.9 > 3.9 we choose second model
+
+### Calculating the LOO estimate
+
+Now let's practice using the loo package on our Spotify model so that we can determine which model provides the best fit to our data. The songs dataset is already loaded.
+
+Instructions
+70 XP
+Estimate a model predicting popularity from song_age
+Print the LOO approximation for this model with 1 predictor
+Estimate a model predicting popularity from song_age, artist_name, and their interaction
+Print the LOO approximation for this model with 2 independent variables
+
+
+
+```{r}
+# Estimate the model with 1 predictor
+model_1pred <- stan_glm(popularity ~ song_age, data = songs)
+
+# Print the LOO estimate for the 1 predictor model
+loo(model_1pred)
+
+# Estimate the model with both predictors
+model_2pred <- stan_glm(popularity ~ song_age * artist_name, data = songs)
+
+# Print the LOO estimates for the 2 predictor model
+loo(model_2pred)
+```
+
+Computed from 1000 by 215 log-likelihood matrix
+
+         Estimate   SE
+elpd_loo   -888.1 12.9
+p_loo         3.3  0.4
+looic      1776.2 25.9
+------
+Monte Carlo SE of elpd_loo is 0.1.
+
+All Pareto k estimates are good (k < 0.5).
+See help('pareto-k-diagnostic') for details.
+> 
+> # Estimate the model with both predictors
+> model_2pred <- stan_glm(popularity ~ song_age * artist_name, data = songs)
+> 
+> # Print the LOO estimates for the 2 predictor model
+> loo(model_2pred)
+
+Computed from 1000 by 215 log-likelihood matrix
+
+         Estimate   SE
+elpd_loo   -864.5 12.6
+p_loo         6.3  0.8
+looic      1729.0 25.2
+------
+Monte Carlo SE of elpd_loo is 0.1.
+
+All Pareto k estimates are good (k < 0.5).
+See help('pareto-k-diagnostic') for details.
+> 
+
+Awesome! In the summary, we see that the model with two predictors has LOO approximation of -865.0, and the model with one predictor has a LOO approximation of -888.1. Because the two predictor model is higher (less negative), we would expect that model to have better predictions. However, in order to know if this increase is meaningful, we need to direclty compare the model and compare the difference to the standard e
+
+
+# Visualiazing Bayesian Model
+
+### Saving model coefficients
+stan_model <- stan_glm(kid_score ~ mom_iq, data = kidiq)
+
+tidy(stan_model)
+tidy_coef <- tidy(stan_model)
+model_intercept <- tidy_coef$estimate[1]
+
+model_slope <- tidy_coef$estimate[2]
+
+
+#than create a plot using ggplot
+
+ggplot(kidiq, aes(x=mom_iq, y=kid_score))+
+  geom_point(0)+
+  geom_abline(intercept=model_intercept, slope=model_slope)
+  
+  
+  
+#we can do more than just a simle plot
+draws <- spread_draws(stan_model, '(Intercept)', mom_iq)
+
+draws
+will show a table
+  
+  ### plotting uncertainty
+  #would show parameters at each iteration
+
+ggplot(kidiq, aes(x=mom_iq, y=kid_score))+
+  geom_point()+
+  geom_abline(data = draws, aes(intercept=model_intercept, slope=model_slope)), size=0.2, alpha=0.1, color='skyblue')
+
+
+or
+
+ggplot(kidiq, aes(x=mom_iq, y=kid_score))+
+  geom_point()+
+  geom_abline(data = draws, aes(intercept='(Intercept)', slope=mom_iq)), size=0.2, alpha=0.1, color='skyblue')
+  
+  
+
+#final step, do add a mean regression line
+
+ggplot(kidiq, aes(x=mom_iq, y=kid_score))+
+  geom_point()+
+  geom_abline(data = draws, aes(intercept='(Intercept)', slope=mom_iq)), size=0.2, alpha=0.1, color='skyblue')+
+  geom_abline(intercept=model_intercept, slope=model_slope)
+
+### Plotting a Bayesian model
+In previous exercises we have estimated a Bayesian model predicting a song's popularity (popularity) from its age (song_age). Now let's visualize the model. Using the songs data set and stan_model object that are already loaded, create a visualization showing the data the estimated regression line using ggplot2.
+
+Instructions
+100 XP
+Save a tidy summary of the model parameters to tidy_coef
+Pull out the estimated intercept and slope from tidy_coef
+Create a plot showing the data and estimate regression line with song_age on the x-axis and popularity on the y-axis
+
+
+```{r}
+# Save the model parameters
+tidy_coef <- tidy(stan_model)
+
+# Extract intercept and slope
+model_intercept <- tidy_coef$estimate[1]
+model_slope <- tidy_coef$estimate[2]
+
+# Create the plot
+ggplot(songs, aes(x = song_age, y = popularity)) +
+  geom_point() +
+  geom_abline(intercept = model_intercept, slope = model_slope)
+```
+
+Great work! In this plot, we can see that older songs are less popular than new songs, as we might expect. This is also reflected by the negative slope coefficient for song_age that we have seen in previous exercises. Unfortunately, this plot doesn't show us any measure of uncertainty or confidence in our line. We'll add this in the next exercise.
+
+Save the values of the (Intercept) and song_age from each draw from the posterior distributions of stan_model
+Print the values to the screen
+
+```{r}
+# Save the values from each draw of the posterior distribution
+draws <- spread_draws(stan_model, `(Intercept)`, `song_age`)
+
+# Print the `draws` data frame to the console
+draws
+```
+# A tibble: 1,000 x 5
+   .chain .iteration .draw `(Intercept)` song_age
+    <int>      <int> <int>         <dbl>    <dbl>
+ 1      1          1     1          65.5 -0.00477
+ 2      1          2     2          67.6 -0.00546
+ 3      1          3     3          70.4 -0.00618
+ 4      1          4     4          69.1 -0.00566
+ 5      1          5     5          61.9 -0.00432
+ 6      1          6     6          63.8 -0.00445
+ 7      1          7     7          69.0 -0.00615
+ 8      1          8     8          68.5 -0.00557
+ 9      1          9     9          69.4 -0.00566
+10      1         10    10          66.6 -0.00545
+# ... with 990 more rows
+
+Start the plot by creating a scatter plot with song_age on the x-axis and popularity on the y-axis
+Add points to the plot
+
+```{r}
+# Save the values from each draw of the posterior distribution
+draws <- spread_draws(stan_model, `(Intercept)`, `song_age`)
+
+# Create the plot
+ggplot(songs, aes(x = song_age, y = popularity)) +
+  geom_point()
+```
+
+Plot the uncertainty by creating a regression line for each draw from the posterior distributions
+Plot these lines in "skyblue" to make them stand out.
+
+
+```{r}
+# Save the values from each draw of the posterior distribution
+draws <- spread_draws(stan_model, `(Intercept)`, `song_age`)
+
+# Create the plot
+ggplot(songs, aes(x = song_age, y = popularity)) +
+	geom_point() +
+	geom_abline(data = draws, aes(intercept = `(Intercept)`, slope = song_age),
+                size = 0.1, alpha = 0.2, color = "skyblue")
+```
+
+Add the final regression line by a plotting a line with final estimated intercept and slope
+
+```{r}
+# Save the values from each draw of the posterior distribution
+draws <- spread_draws(stan_model, `(Intercept)`, `song_age`)
+
+# Create the plot
+ggplot(songs, aes(x = song_age, y = popularity)) +
+	geom_point() +
+	geom_abline(data = draws, aes(intercept = `(Intercept)`, slope = song_age),
+                size = 0.1, alpha = 0.2, color = "skyblue") +
+	geom_abline(intercept = model_intercept, slope = model_slope)
+```
+
+Awesome work! In our final plot we can see the data, the estimated regression line, and the uncertainty around the line. This is a ton of information conveyed in easily understandable plot that took only a few lines of code to create!
+
+### Making predictions
+
+Making prediction from observed data
+stan_mopdel <- stan_glm(kid_score ~ mom_iq +mom_hs, data=kidiq)
+
+
+posteriors <- posterior_predict(stan_model)
+posteriors[1:10, 1:5]
+#would return a matrix a row for each observation
+
+### To Make predictions for a new data
+predict iq for children with mom iq 110, where mum completed high education and didint
+
+
+predict_data <- data.frame(
+mom_iq=110,
+mom_hs=c(0,1)
+)
+
+predict_data
+
+#supply new data
+new_predictions <- posterior_predict(stan_model, newdata = predict_data)
+
+new_predictions[1:10,]  #will see new predictions
+
+We can also look for a summary for each column:
+summary(new_predictions[,1])
+
+
+summary(new_predictions[,2])
+
+Popularity for Observed Songs
+Let's practice making predictions about song popularity from the Spotify songs data. This will get us used to the syntax we will use for making predictions for new data that was not observed.
+
+Instructions
+100 XP
+Estimate a model predicting popularity from song_age and artist_name
+Print a summary of the estimated model
+Create posterior distributions of the predicted scores for each song
+Print the first 10 predicted scores for the first 5 songs
+
+
+```{r}
+# Estimate the regression model
+stan_model <- stan_glm(popularity ~ song_age + artist_name, data = songs)
+
+# Print the model summary
+summary(stan_model)
+
+# Get posteriors of predicted scores for each observation
+posteriors <- posterior_predict(stan_model)
+
+# Print 10 predicted scores for 5 songs
+posteriors[1:10, 1:5]
+```
+
+> # Estimate the regression model
+> stan_model <- stan_glm(popularity ~ song_age + artist_name, data = songs)
+> 
+> # Print the model summary
+> summary(stan_model)
+
+Model Info:
+ function:     stan_glm
+ family:       gaussian [identity]
+ formula:      popularity ~ song_age + artist_name
+ algorithm:    sampling
+ sample:       1000 (posterior sample size)
+ priors:       see help('prior_summary')
+ observations: 215
+ predictors:   4
+
+Estimates:
+                            mean   sd    10%   50%   90%
+(Intercept)                73.8    3.0  70.0  73.8  77.7
+song_age                    0.0    0.0   0.0   0.0   0.0
+artist_nameBeyoncé -19.4    2.9 -23.2 -19.3 -15.6
+artist_nameTaylor Swift    -6.6    2.8 -10.2  -6.5  -3.1
+sigma                      13.4    0.6  12.6  13.3  14.2
+
+Fit Diagnostics:
+           mean   sd   10%   50%   90%
+mean_PPD 52.5    1.3 50.9  52.5  54.3 
+
+The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+
+MCMC diagnostics
+                          mcse Rhat n_eff
+(Intercept)               0.1  1.0   812 
+song_age                  0.0  1.0   981 
+artist_nameBeyoncé 0.1  1.0   607 
+artist_nameTaylor Swift   0.1  1.0   668 
+sigma                     0.0  1.0  1014 
+mean_PPD                  0.0  1.0   808 
+log-posterior             0.1  1.0   374 
+
+For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+> 
+> # Get posteriors of predicted scores for each observation
+> posteriors <- posterior_predict(stan_model)
+> 
+> # Print 10 predicted scores for 5 songs
+> posteriors[1:10, 1:5]
+             1        2        3        4        5
+ [1,] 17.46914 30.08785 17.72675 31.60944 29.24658
+ [2,] 39.83186 24.05817 31.68237 31.71318 41.42611
+ [3,] 32.38135 17.40279 73.17378 33.81515 33.32722
+ [4,] 35.09393 63.19715 27.89605 33.99480 35.35088
+ [5,] 22.15076 28.50019 38.02816 31.07715 49.12243
+ [6,] 44.08384 35.22214 15.18372 48.27343 58.15500
+ [7,] 49.38789 59.00505 36.78425 48.55280 35.32525
+ [8,] 49.13213 33.42133 12.31138 63.27161 62.79061
+ [9,] 42.67385 58.64308 25.77511 40.25950 27.81686
+[10,] 27.04997 24.43449 26.67260 28.02212 33.58651
+> 
+
+
+Great work! We now have a posterior distribution for the predicted popularity of every song in our data set. But what if we want to predict the popularity for songs that aren't in our data set? We'll do this in the next exercise.
+
+
+Create a data frame of new data to be predicted including the song_age and artist_name variables
+Create a posterior distribution for predicted popularity of a song on Lemonade
+Print the predicted popularity for the first 10 draws from the posterior distribution
+Print a summary of the posterior predictions for the 1 new observation
+
+
+
+```{r}
+# Create data frame of new data
+predict_data <- data.frame(song_age = 663, artist_name = "Beyoncé")
+
+# Create posterior predictions for Lemonade album
+new_predictions <- posterior_predict(stan_model, newdata = predict_data)
+
+# Print first 10 predictions for the new data
+new_predictions[1:10,]
+
+# Print a summary of the posterior distribution of predicted popularity
+summary(new_predictions[, 1])
+```
+
+> # Create data frame of new data
+> predict_data <- data.frame(song_age = 663, artist_name = "Beyoncé")
+> 
+> # Create posterior predictions for Lemonade album
+> new_predictions <- posterior_predict(stan_model, newdata = predict_data)
+> 
+> # Print first 10 predictions for the new data
+> new_predictions[1:10,]
+ [1] 41.36073 54.00650 40.36541 57.63265 58.05184 34.71963 41.42396 70.78077
+ [9] 72.99499 44.07136
+> 
+> # Print a summary of the posterior distribution of predicted popularity
+> summary(new_predictions[, 1])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  8.808  42.480  52.040  52.115  61.437  93.781
+> 
+
+
+
+
+Awesome! We now have a posterior distribution for the predicted popularity of a song from the the Lemonade album. From the posterior summary we can see there is large range of plausible values, ranging from 10.85 to 98.45!
+
+
+
+### Visualiazing predictions
+stan_model <- stan_glm(kid_score ~ mom_iq + mom_hs, data=kidiq)
+
+predict_data <- data.frame(
+mom_iq=110,
+mom_hs=c(0,1)
+)
+
+posterior <- posterior_predict(stan_model, newdata=predict_data)
+
+posterior[1:10,]
+
+#first step is to format the data so we can display it with ggplot2
+
+posterior <- as.data.frame(posterior)
+#set column names
+colnames(posterior) <- c('No HS', 'Completed HS')
+
+#use gather function from tldr package to reformat for ggplot2
+plot_posterior <- gather(posterior, key='HS', value='predict')
+
+head(plot_posterior)  #leaves us with 2 columns
+
+
+#creating plot call ggplot function
+ggplot(plot_posterior, aes(x=predict))+ 
+  facet_wrap(~HS, ncol=1)+geom_density()
+  #we want predict column on x axis
+  
+Format prediction posteriors
+Now let's plot some new predictions. In this exercise, we'll predict how popular a song would be that was newly released and has a song_age of 0. We're still predicting popularity from song_age and artist_name. The new_predictions object has already been created and contains the distributions for the predicted scores for a new song from Adele, Taylor Swift, and Beyoncé.
+
+Instructions
+100 XP
+Print the predicted scores from the first 10 iterations of new_predictions.
+Convert new_predictions to a data frame and name the columns of the data frame "Adele", "Taylor Swift", and "Beyoncé".
+Structure the data in long format, with only two columns: artist_name and predict.
+Print the first six rows of the newly structured plot_posterior data frame.
+
+
+```{r}
+# View new data predictions
+new_predictions[1:10, ]
+
+# Convert to data frame and rename variables
+new_predictions <- as.data.frame(new_predictions)
+colnames(new_predictions) <- c("Adele", "Taylor Swift", "Beyoncé")
+
+# Create tidy data structure
+plot_posterior <- gather(new_predictions, key = "artist_name", value = "predict")
+
+# Print formated data
+head(plot_posterior)
+```
+
+> # View new data predictions
+> new_predictions[1:10, ]
+             1        2        3
+ [1,] 68.27328 71.20382 44.99720
+ [2,] 79.60502 66.31792 36.42753
+ [3,] 64.64074 87.03259 70.04172
+ [4,] 65.42589 46.63023 77.19473
+ [5,] 78.58974 69.57314 64.07304
+ [6,] 86.79833 80.90299 75.42468
+ [7,] 76.95109 58.19514 61.89407
+ [8,] 91.18109 58.56188 52.35479
+ [9,] 67.52289 81.65796 55.79507
+[10,] 75.90935 52.76207 74.94122
+> 
+> # Convert to data frame and rename variables
+> new_predictions <- as.data.frame(new_predictions)
+> colnames(new_predictions) <- c("Adele", "Taylor Swift", "Beyoncé")
+> 
+> # Create tidy data structure
+> plot_posterior <- gather(new_predictions, key = "artist_name", value = "predict")
+> 
+> # Print formated data
+> head(plot_posterior)
+  artist_name  predict
+1       Adele 68.27328
+2       Adele 79.60502
+3       Adele 64.64074
+4       Adele 65.42589
+5       Adele 78.58974
+6       Adele 86.79833
+> 
+Great work! We now have a data frame with two columns: artist_name and predict. We can use this data set to create of plot of the predicted popularity of songs for each artist that are brand new! We'll make this plot in the next exercise.
+
+
+Visualize New Predictions
+Now that you've formatted the data, it's time to create the plot of predicted popularity distributions. The plot_posterior data frame that you just created is already available in the environment. We will use that data frame to create a visualization to communicate the results of our analysis.
+
+Instructions
+100 XP
+Create a ggplot graphic with predict on the x-axis
+Wrap the graphic so that each artist_name gets its own plot
+Keep all facets of the plot in one column
+Draw a density curve for the predicted popularity
+
+```{r}
+# Create plot of 
+ggplot(plot_posterior, aes(x = predict)) +
+	facet_wrap(~ artist_name, ncol = 1) +
+	geom_density()
+```
+Great work! You've create a great looking plot to visualize the predicted popularity of a new song from each of these artists. We can see that the distribution for Adele has the highest predicted popularity, followed by Taylor Swift, and then Beyoncé.
+
+Conclusion
+
+
+other course
+Bayesian Modeling with RJAGS
+
+
+
+
+
